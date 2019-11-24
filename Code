@@ -1,1 +1,345 @@
-fdafdafdsafdsa
+import numpy as np
+import matplotlib.pyplot as plt
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+import math
+
+x = int(input('Please input the number of points you want in the pointset:')) #user input number of points in pointset S
+
+#generate random point set
+#S = np.random.randint(0, 12, size=(10,2)) #random ndarray list of 12 points with integers between 0-12
+S = np.random.choice(range(4*x), (x,2), replace=False)
+X = np.copy(S)
+Y = np.copy(S)
+print('S = \n',S)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#swap 2 points in ndarray list
+def swapPos(List, pos1, pos2):
+    List[[pos1, pos2]] = List[[pos2, pos1]] #put index as a whole, List[pos1], List[pos2] = List[pos2], List[pos1] won't work with numpy array list
+    return List
+
+#index rows of ndarray list
+def indx(List, element): 
+    index = 0
+    for i in List:
+        if i[0] == element[0] and i[1] == element[1]: #if x-coor == x-coor and y-coor == y-coor
+            return index
+        index += 1
+        
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Arrange points from left to right
+for i in X:
+    for j in X[indx(X,i):]: #every point after element i
+        if i[0]>j[0] and indx(X,i)<indx(X,j): #if x-coor of i > x-coor of j, and index of i < index of j
+            swapPos(X, indx(X,i), indx(X,j))
+        if i[0] == j[0]: #if x-coor the same, sort by ascending y-coor
+            if i[1]>j[1] and indx(X,i)<indx(X,j):
+                swapPos(X, indx(X,i), indx(X,j))
+print('X= \n', X, '\nby ascending x-coordinate\n\n')
+
+#Arrange points in from lowest to highest
+for i in Y:
+    for j in Y[indx(Y,i):]: #every point after element i
+        if i[1]>j[1] and indx(Y,i)<indx(Y,j): #if y-coor of i > y-coor of j, and index of i < index of j
+            swapPos(Y, indx(Y,i), indx(Y,j))
+        if i[1] == j[1]: #if y-coor the same, sort by ascending x-coor
+            if i[0]>j[0] and indx(Y,i)<indx(Y,j):
+                swapPos(Y, indx(Y,i), indx(Y,j))
+print('Y= \n', Y, '\nby ascending y-coordinate')
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Check if a point is above a line #The line is defined by two other points l1,l2
+def above_line(pt, l1, l2):
+    slope = (l2[1] - l1[1])/(l2[0]-l1[0])
+    yint = l1[1] - slope*l1[0]
+    return pt[1] > slope*pt[0]+yint 
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Divide points of S by which points lie above/below the line connecting the left and right endpoints of our pointset
+A = np.ndarray.tolist(X)
+above_1 = []
+below_1 = []
+for i in A[1:-1]: #first point is left endpoint, last point is right endpoint
+    if above_line(i,A[0],A[-1])==True:
+        above_1.append(i)
+    else:
+        below_1.append(i)
+
+print('The 2 hull points that define our dividing line are ', A[0], A[-1])
+print('The points above this line are ',above_1)
+print('The points below this line are ',below_1)
+
+plt.style.use('fivethirtyeight')
+plt.xlabel('x-axis'), plt.ylabel('y-axis')
+plt.grid(True)
+
+#x-coor and y-coor lists of points in S
+xpoints = S[:,0]
+ypoints = S[:,1]
+
+#x-coor and y-coor lists of points in above and below lists
+xs_a = [x[0] for x in above_1]
+ys_a = [x[1] for x in above_1]
+xs_b = [x[0] for x in below_1]
+ys_b = [x[1] for x in below_1]
+plt.scatter(xs_a, ys_a, color='green') #scatter plot of above points
+plt.scatter(xs_b, ys_b, color='blue') #scatter plot of below points
+
+endpoints = [X[0],X[-1]]
+xx = [x[0] for x in endpoints]
+yy = [x[1] for x in endpoints]
+plt.scatter(xx, yy, color='red') #scatter plot of left and right endpoints
+plt.plot(xx, yy, color='red', lw=1)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#calculate distance between 2 points
+def distance(p1,p2):
+    base = abs(p2[0]-p1[0])
+    height = abs(p2[1]-p1[1])
+    hypotnuse = math.sqrt(base**2 + height**2)
+    return hypotnuse
+
+#calculate x-distance between two points
+def base(p1,p2):
+    base = abs(p2[0]-p1[0])
+    return base 
+
+#calculate y-distance between two points
+def height(p1,p2):
+    height = abs(p2[1]-p1[1])
+    return height
+
+#calculate angle of right triangle created from height and base of triangle
+def angle(p1,p2):
+    angle = math.atan2(height(p1,p2),base(p1,p2))
+    return angle
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Arrange points by ascending angle relative to a point of origin
+def angle_arrange(List, origin):
+    for i in List:
+        for j in List[indx(List,i):]:
+            if angle(origin,i) > angle(origin,j) and indx(List,i)<indx(List,j):
+                swapPos(List, indx(List,i), indx(List,j))
+            if angle(origin,i) == angle(origin,j) and j[0] < i[0]:
+                swapPos(List, indx(List,i), indx(List,j))
+    return List
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+origin_a = [X[0][0],Y[0][1]] #"Left bottom corner" of pointset
+above_2 = np.asarray(above_1)
+above_3 = angle_arrange(above_2,origin_a)
+
+origin_b = [X[-1][0],Y[-1][1]] #"Right upper corner" of pointset
+below_2 = np.asarray(below_1)
+below_3 = angle_arrange(below_2,origin_b)
+
+above = np.ndarray.tolist(above_3) #points above dividing line arranged in order of ascending angle relative to origin_a
+below = np.ndarray.tolist(below_3) #points below dividing line arranged in order of ascending angle relative to origin_b
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+fig = plt.figure(figsize=(15,10))
+ax = fig.add_subplot(111)
+
+plt.style.use('fivethirtyeight')
+plt.xlabel('x-axis'), plt.ylabel('y-axis')
+plt.grid(True)
+
+#Lists of x-coor and y-coor of above and below lists
+xs_a1 = [x[0] for x in above]
+ys_a1 = [x[1] for x in above]
+xs_b1 = [x[0] for x in below]
+ys_b1 = [x[1] for x in below]
+
+ax.scatter(xs_a1, ys_a1, color='green') #scatter plot of above points
+for i, text in enumerate(above):
+    ax.annotate(i, (xs_a1[i], ys_a1[i]), color='green')
+
+ax.scatter(xs_b, ys_b, color='blue') #scatter plot of below points
+for i, text in enumerate(below):
+    ax.annotate(i, (xs_b1[i], ys_b1[i]), color='blue')
+
+endpoints = [X[0],X[-1]]
+xx = [x[0] for x in endpoints]
+yy = [x[1] for x in endpoints]
+ax.scatter(xx, yy, color='red') #scatter plot of left and right endpoints
+ax.plot(xx, yy, color='red', lw=2)
+
+#scatter plot of each anchor point
+ax.scatter(origin_a[0],origin_a[1], color='black', marker = 'o', s=100)
+ax.scatter(origin_b[0],origin_b[1], color='black', marker = 'o', s=100)
+
+for i in above: #draw line from lower-left anchor point to each above point
+    xs = [origin_a[0],i[0]]
+    ys = [origin_a[1],i[1]]
+    ax.plot(xs,ys,color='green',lw=1,ls='--')
+    
+for i in below: #draw line from upper-right anchor point to each below point
+    xs = [origin_b[0],i[0]]
+    ys = [origin_b[1],i[1]]
+    ax.plot(xs,ys,color='blue',lw=1,ls='--')
+    
+pt_a = [X[-1][0],Y[0][1]] #above pointset angle reference point
+xss = [origin_a[0],pt_a[0]]
+yss = [origin_a[1],pt_a[1]]
+ax.plot(xss,yss,color='green',lw=3)
+
+pt_b = [X[0][0],Y[-1][1]] #below pointset angle reference point
+xes = [origin_b[0],pt_b[0]]
+yes = [origin_b[1],pt_b[1]]
+ax.plot(xes,yes,color='blue',lw=3)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Create a vector between two points
+def create_vector(p1,p2):
+    vector = (p2[0]-p1[0], p2[1]-p1[1])
+    return vector
+
+#Check if p2 is a convex point
+def convex_check(p1, p2, p3):
+    v1 = create_vector(p2, p1) #vector from p2 to p1
+    v2 = create_vector(p2, p3) #vector from p2 to p3
+    v_cross = -v1[1]*v2[0]+v1[0]*v2[1] #z vector created from cross product
+    return v_cross <= 0 #if z vector returns a negative value, then it is convex
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Algorithm for adding and removing points to upper convex hull
+if len(above) != 0: #if above points is not an empty list
+    hull = [A[0],A[-1]] #add endpoints to hull
+    hull.append(above[0]) #add first above point to hull
+    
+    for i in range(len(above))[1:]:
+
+        if convex_check(hull[-2],hull[-1],above[i])==True: #if the last hull point is convex
+            hull.append(above[i]) #add above[i] to hull list
+            if i==len(above)-1: #if last point in above, while that point is not convex, remove from hull list
+                while convex_check(hull[-2],hull[-1],hull[0])==False:
+                    hull.remove(hull[-1])
+
+        else: #if last hull point is NOT convex
+            hull.append(above[i]) #add above[i] to hull list anyways
+            while convex_check(hull[-3],hull[-2],hull[-1])==False: #while the second to last hull point is not convex, remove it
+                hull.remove(hull[-2])
+            if i==len(above)-1: #if above[i] is last point in above
+                while convex_check(hull[-2],hull[-1],hull[0])==False: #while it's not convex, remove it
+                    hull.remove(hull[-1])
+                
+else:
+    hull = [A[0],A[-1]] #hull is just endpoints
+
+hull.append(hull[0]) #move right endpoint to end of list
+hull.remove(hull[0])
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Algorithm for adding and removing points to lower convex hull
+if len(below) != 0: #if below points is not an empty list
+    hull2 = [A[-1],A[0]] #add endpoints to hull
+    hull2.append(below[0]) #add first below point to hull
+    
+    for i in range(len(below))[1:]:
+
+        if convex_check(hull2[-2],hull2[-1],below[i])==True: #if the last hull point is convex
+            hull2.append(below[i]) #add below[i] to hull list
+            if i==len(below)-1: #if last point in below, while that point is not convex, remove from hull list
+                while convex_check(hull2[-2],hull2[-1],hull2[0])==False:
+                    hull2.remove(hull2[-1])
+
+        else: #if last hull point is NOT convex
+            hull2.append(below[i]) #add below[i] to hull list anyways
+            while convex_check(hull2[-3],hull2[-2],hull2[-1])==False: #while the second to last hull point is not convex, remove it
+                hull2.remove(hull2[-2])
+            if i==len(below)-1: #if below[i] is last point in below
+                while convex_check(hull2[-2],hull2[-1],hull2[0])==False: #while it's not convex, remove it
+                    hull2.remove(hull2[-1])
+
+    hull2.append(hull2[0]) #move left endpoint to end of list
+    hull2.remove(hull2[0])
+    
+else:
+    hull2 = [A[-1],A[0]] #hull is just endpoints
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+#Create numpy array of all hull points in counterclockwise order starting from the rightmost point
+hull_new_a = hull[1:-1]
+hull_new_b = hull2[1:-1]
+hull_new = [A[-1]]
+for i in hull_new_a:
+    hull_new.append(i)
+hull_new.append(A[0])
+for i in hull_new_b:
+    hull_new.append(i)
+newhull = np.asarray(hull_new)
+print('Hull =\n',newhull,'\n which are ordered in counterclockwise order starting from the rightmost point')
+
+#Display Convex Hull
+fig = plt.figure(figsize=(15,10))
+ax1 = fig.add_subplot(111)
+
+plt.style.use('fivethirtyeight')
+plt.xlabel('x-axis'), plt.ylabel('y-axis')
+plt.grid(True)
+
+xxs = [x[0] for x in hull] #x-coor of above points
+yys = [x[1] for x in hull] #y-coor of above points
+ax1.plot(xxs,yys,lw=2, color='blue') #plot above points
+
+xxxs = [x[0] for x in hull2] #x-coor of below points
+yyys = [x[1] for x in hull2] #y-coor of below points
+ax1.plot(xxxs,yyys,lw=2,color='blue') #plot below points
+
+ax1.scatter(xpoints,ypoints,color='red') #plot all points of S
+
+ax1.scatter(xxs,yys,color='red',s=100, marker='x')
+ax1.scatter(xxxs,yyys,color='red',s=100, marker='x')
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+print('Additional cool line graph of all points in above and below connected in ascending x-coor')
+
+fig = plt.figure(figsize=(15,10))
+ax2 = fig.add_subplot(111)
+
+ax2.plot(xs_a, ys_a, color='green',lw=1) #line graph plot of above points
+ax2.plot(xs_b, ys_b, color='blue',lw=1) #line graph plot of below points
+
+ax2.scatter(xx, yy, color='red') #scatter plot of left and right endpoints
+ax2.plot(xx, yy, color='red', lw=1)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+print('Additional cool line graph of all points in above and below connected in ascending angle relative to their anchor point')
+
+above_xs = [x[0] for x in above]
+above_ys = [x[1] for x in above]
+below_xs = [x[0] for x in below]
+below_ys = [x[1] for x in below]
+
+fig = plt.figure(figsize=(15,10))
+ax2 = fig.add_subplot(111)
+
+ax2.plot(above_xs, above_ys, color='green',lw=1) #line graph plot of above points
+ax2.plot(below_xs, below_ys, color='blue',lw=1) #line graph plot of below points
+
+ax2.scatter(xx, yy, color='red') #scatter plot of left and right endpoints
+ax2.plot(xx, yy, color='red', lw=1)
+
+#scatter plot of each anchor point
+ax2.scatter(origin_a[0],origin_a[1], color='green', marker = 'o', s=200)
+ax2.scatter(origin_b[0],origin_b[1], color='blue', marker = 'o', s=200)
+
+ax2.plot(xss,yss,color='green',lw=2,ls='--')
+ax2.plot(xes,yes,color='blue',lw=2,ls='--')
+
