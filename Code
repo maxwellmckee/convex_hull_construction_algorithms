@@ -1,0 +1,143 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mayavi import mlab as mylab
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+import math
+
+#Generate array list of number of points specified by user
+x = int(input('Please input the number of points you want in the pointset:')) #user input number of points in pointset S
+S = np.random.choice(range(4*x), (x,3), replace=False)
+#S = np.asarray([[4,0,0],[0,4,0],[0,0,4],[0,0,0],[1,1,1]]) #good arrray list for testing functionality of program
+
+#Generate an array list of normalized points on a unit sphere #when graphing, use scale factor of .05 and .04
+#size = 400
+#n = 3 
+#S = np.random.normal(size=(size, n)) 
+#S /= np.linalg.norm(S, axis=1)[:, np.newaxis]
+print('S = \n',S)
+
+
+#index rows of ndarray list
+def indx(List, element): 
+    index = 0
+    for i in List:
+        if i[0] == element[0] and i[1] == element[1] and i[2] == element[2]: #if x-coor == x-coor, y-coor == y-coor, z-coor == z-coor
+            return index
+        index += 1
+        
+        
+#Create a vector between two points
+def create_vector(p1,p2): #vector points from p1 to p2
+    vector = (p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2])
+    return vector
+    
+
+#Check if a point lies above a plane defined by 3 points
+def above_plane(p1,p2,p3,t1): #p1,p2,p3 define our plane
+    v1 = [p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]] #a vector in our plane
+    v2 = [p3[0]-p1[0],p3[1]-p1[1],p3[2]-p1[2]] #another vector in our plane
+    
+    #a,b,c defines a vector tangent to our plane
+    a = v1[1]*v2[2] - v1[2]*v2[1] 
+    b = -(v1[0]*v2[2] - v1[2]*v2[0])
+    c = v1[0]*v2[1] - v1[1]*v2[0]
+    
+    #coordinates of t1, which we are checking is above plane
+    x = t1[0] 
+    y = t1[1]
+    z = t1[2]
+    
+    plane_eq = a*(x-p1[0]) + b*(y-p1[1]) + c*(z-p1[2]) #equation of plane 
+    
+    n = [a,b,c] #normal vector to plane
+    p1t1 = [t1[0]-p1[0],t1[1]-p1[1],t1[2]-p1[2]] #vector from plane to t1
+    
+    dot = n[0]*p1t1[0] + n[1]*p1t1[1] + n[2]*p1t1[2] #dot product of n and p1t1
+    
+    return dot >= 0 #return True if point is above plane
+
+
+#Check if a point lies above a plane defined by 3 points
+def below_plane(p1,p2,p3,t1): #p1,p2,p3 define our plane
+    v1 = [p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]] #a vector in our plane
+    v2 = [p3[0]-p1[0],p3[1]-p1[1],p3[2]-p1[2]] #another vector in our plane
+    
+    #a,b,c defines a vector tangent to our plane
+    a = v1[1]*v2[2] - v1[2]*v2[1] 
+    b = -(v1[0]*v2[2] - v1[2]*v2[0])
+    c = v1[0]*v2[1] - v1[1]*v2[0]
+    
+    #coordinates of t1, which we are checking is below plane
+    x = t1[0] 
+    y = t1[1]
+    z = t1[2]
+    
+    plane_eq = a*(x-p1[0]) + b*(y-p1[1]) + c*(z-p1[2]) #equation of plane 
+    
+    n = [a,b,c] #normal vector to plane
+    p1t1 = [t1[0]-p1[0],t1[1]-p1[1],t1[2]-p1[2]] #vector from plane to t1
+    
+    dot = n[0]*p1t1[0] + n[1]*p1t1[1] + n[2]*p1t1[2] #dot product of n and p1t1
+    
+    return dot <= 0 #return True if point is below plane
+    
+
+hull_pts = []
+T = np.ndarray.tolist(S)
+
+print('Hull faces: ')
+
+for i in T:
+    for j in T[indx(T, i)+1:]: #for every element after i
+        for k in T[indx(T, j)+1:]: #for every element after j
+            above = 0
+            below = 0
+            for m in T:
+                if m!=i and m!=j and m!=k: #for every element that is not i,j,k
+                    if above_plane(i,j,k,m) == True: 
+                        above += 1
+                        #print('above')
+                    if below_plane(i,j,k,m) == True:
+                        below += 1
+                        #print('below')
+                    if above == len(S)-3 or below == len(S)-3: #if the rest of the points lie on the same side of plane i,j,k
+                        hull_pts.append(i), hull_pts.append(j), hull_pts.append(k)
+                        print(i,j,k)
+                        
+print('\nThe n-gon has ',int(len(hull_pts)/3), ' faces')
+
+
+S2 = np.ndarray.tolist(S)
+for i in S2:
+    if i in hull_pts:
+        S2.remove(i)
+
+S3 = np.asarray(S2) #list of non-hull points
+U = np.asarray(hull_pts) #list of hull points
+
+#x,y,z of non-hull points
+sx = S3[:,0]
+sy = S3[:,1]
+sz = S3[:,2]
+
+#x,y,z of hull points
+ux = U[:,0]
+uy = U[:,1]
+uz = U[:,2]
+
+first = [] #first point of each triangular plane
+second = [] #second point of each triangular plane
+third = [] #third point of each triangular plane
+
+for i in range(len(U)//3):
+    first.append(3*i)
+    second.append(3*i+1)
+    third.append(3*i+2)
+
+faces = np.array([first,second,third])
+mylab.triangular_mesh(ux,uy,uz, faces.T, opacity=.5) #graphs triangular faces
+mylab.triangular_mesh(ux,uy,uz, faces.T, representation='wireframe', color=(0,0,0)) #graphs wire frame of faces 
+mylab.points3d(ux,uy,uz, scale_factor=10) #graphs hull points #sf=2.5
+mylab.points3d(sx,sy,sz, color=(1,0,0), scale_factor=9, opacity=.4) #graphs non-hull points #sf=2
+mylab.show()
