@@ -138,6 +138,6 @@ for i in range(len(U)//3):
 faces = np.array([first,second,third])
 mylab.triangular_mesh(ux,uy,uz, faces.T, opacity=.5) #graphs triangular faces
 mylab.triangular_mesh(ux,uy,uz, faces.T, representation='wireframe', color=(0,0,0)) #graphs wire frame of faces 
-mylab.points3d(ux,uy,uz, scale_factor=10) #graphs hull points #sf=2.5
-mylab.points3d(sx,sy,sz, color=(1,0,0), scale_factor=9, opacity=.4) #graphs non-hull points #sf=2
+mylab.points3d(ux,uy,uz, scale_factor=4) #graphs hull points #sf=2.5
+mylab.points3d(sx,sy,sz, color=(1,0,0), scale_factor=3, opacity=.4) #graphs non-hull points #sf=2
 mylab.show()
