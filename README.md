@@ -11,4 +11,3 @@ An algorithm that constructs the convex hull of a pointset using a method I call
     * For the below list, anchor point is "upper right corner" of plot, with angle relative to the "ceiling"
 * We now generate a list of convex hull points using an incremental algorithm over the set of above points and below points. We start the convex hull with the left and right endpoints for both the above pointsets and below pointsets
 * Using the dot-product of two vectors, we determine if each next iterated point forms a convex angle. If it does, add it to the list. If it does not, keep removing points until the angle is convex again
-* In the code, I will distinguish code cell blocks with #--------------------------
